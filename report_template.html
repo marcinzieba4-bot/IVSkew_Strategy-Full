@@ -85,6 +85,11 @@ ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-wid
     <h3>Long single-stock calls + short SPY calls: sensitivity to SPY call skew</h3>
     <p>These rows buy delta-matched calls on each stock and sell SPY calls with the same dollar delta, so each slot starts delta-neutral. SPY OTM calls trade at a lower IV than ATM because of index skew. The main table assumes the 30-delta SPY call is 2 vol points below ATM. The result depends heavily on that assumption: each vol point is worth about 4–5% of CAGR.</p>
     <div class="tbl"><table id="wing-tbl"></table></div>
+    <h3>SPY put timing: hold puts only when a rule is on</h3>
+    <p>Each rule is checked on the signal day using past data only. When it is on, ATM SPY puts are held for that basket. The first table shows how the puts did when each rule was on versus off, in % of put notional per basket. The second shows the effect on the books. Follows the hold toggle above.</p>
+    <div class="tbl"><table id="pt-diag"></table></div>
+    <div class="tbl"><table id="pt-books"></table></div>
+    <p class="note">Rules: SPY put IV in the bottom 25% / 50% of its past year · IV minus 20-day realised vol in its bottom 25% · SPY 30-day skew in its bottom 25% · SPY below its 50 / 200-day average · "calm top" = within 2% of the 1-year high with IV in its bottom 25%. With 9 rules × 2 holds and only 20–75 baskets per rule, treat single wins with suspicion. Only a rule that works at both holds and in both halves of the sample is worth trusting.</p>
     <h3>Option trades: return on premium</h3>
     <div class="tbl"><table id="opt-tbl"></table></div>
   </section>
@@ -230,7 +235,18 @@ $('ctrl').innerHTML = '<tr><th>Dip bucket (skew90)</th><th>Avg excess vs sector 
 const VROWS = ['L18 stock','L18 sec','L18 spy','L18 atm','L18 c30','L18 atm_dm','L18 c30_dm','L18 x_atm','L18 x_c30','L18 x_mix','L18 h1','L18 h2','L18 pp50','L18 pp100','G3 stock','G3 sec','G3 spy','G3 atm_dm','G3 x_atm','G3 x_mix','G3 h1','G3 h2','G3 pp50','G3 pp100','S18 stock','S18 put','S18 put_dm','G2 put_dm','G4 put_dm','CP36 atm','CP36 atm_dm','Book 18L/18S (stock shorts)','SPY'];
 const VCOLS = [['CAGR','p'],['Ann. vol','p'],['Sharpe','n'],['Sortino','n'],['Max drawdown','p'],['Calmar','n'],['CVaR 95%','p'],['Worst period','p'],['Beta to SPY','n'],['Hit rate','x']];
 let hold = '3 weeks';
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function drawPT(){
+  const D = R.pt_diag.filter(r=>r.hold===hold), B = R.pt_books.filter(r=>r.hold===hold);
+  const f2 = x => (x==null||isNaN(x)) ? '—' : (x>=0?'+':'') + x.toFixed(2) + '%';
+  $('pt-diag').innerHTML = '<tr><th>Rule</th><th>Baskets on</th><th>On %</th><th>Put P&amp;L when on</th><th>Put P&amp;L when off</th><th>Puts paid off (on)</th><th>SPY ret (on)</th><th>SPY ret (off)</th></tr>' +
+    D.map(r => `<tr class="${r.rule==='spy<sma50'?'hl':''}"><td>${esc(r.rule)}</td><td>${r['baskets on']}</td><td>${r['puts on %'].toFixed(0)}%</td><td class="${cls(r['put P&L % notional (on)'])}">${f2(r['put P&L % notional (on)'])}</td><td class="${cls(r['put P&L % notional (off)']||0)}">${f2(r['put P&L % notional (off)'])}</td><td>${r['put paid off % (on)'].toFixed(0)}%</td><td>${f2(r['SPY ret % (on)'])}</td><td>${f2(r['SPY ret % (off)'])}</td></tr>`).join('');
+  const cols = [['CAGR','p'],['Ann. vol','p'],['Sharpe','n'],['Max drawdown','p'],['Worst period','p'],['2020','p'],['2022','p'],['Sharpe 2018-22H1','n'],['Sharpe 2022H2-26','n']];
+  $('pt-books').innerHTML = '<tr><th>Book · rule</th><th>Puts on</th>' + cols.map(c=>`<th>${c[0].replace('Sharpe 2018-22H1','Sharpe 1st half').replace('Sharpe 2022H2-26','Sharpe 2nd half')}</th>`).join('') + '</tr>' +
+    B.map(r => `<tr class="${r.rule==='none'?'bench':''} ${r.rule==='spy<sma50'?'hl':''}"><td>${r.book} · ${esc(r.rule)}</td><td>${r['puts on %'].toFixed(0)}%</td>` + cols.map(([c,ty])=>`<td class="${['CAGR','Sharpe','2020','2022'].includes(c)?cls(r[c]):''}">${rf(ty,r[c])}</td>`).join('') + '</tr>').join('');
+}
 function drawVarTbl(){
+  drawPT();
   const s = VS[hold];
   const best = Math.max(...VROWS.filter(k=>k!=='SPY').map(k=>s[k].Sharpe));
   $('var-tbl').innerHTML = '<tr><th>Variant (' + hold + ' hold)</th>' + VCOLS.map(c=>`<th>${c[0]}</th>`).join('') + '</tr>' +

@@ -187,7 +187,8 @@ def run_hold(label, px, f, ivs, rf):
                                **{f"{k}_strike": v["K"] for k, v in opt.items()},
                                **{f"{k}_premium": v["prem"] for k, v in opt.items()},
                                **{f"{k}_ret_on_premium": v["ror"] for k, v in opt.items()}})
-        row = {"exit": x, "SPY": spy, "cash": cash}
+        row = {"exit": x, "signal": d, "entry": e, "SPY": spy, "cash": cash,
+               "spy_put": spy_put if np.isfinite(spy_put) else 0.0}
         for k in slots:
             row[f"L18 {k}"] = (sum(slots[k]) + (2 * n - len(slots[k])) * cash) / (2 * n)
             row[f"G3 {k}"] = (sum(g3[k]) + (n - len(g3[k])) * cash) / n
