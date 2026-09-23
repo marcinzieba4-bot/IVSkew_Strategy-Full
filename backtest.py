@@ -11,7 +11,13 @@ signal day's close and pick the single most extreme name per group:
                          NEAR_HIGH of 60d high (hedgers bid puts at the top)  -> highest skew
 
 Positions are entered at the NEXT day's close (no look-ahead), held REBAL
-trading days, equal-weighted within each group, then a new basket is formed.
+trading days, then a new basket is formed.
+
+Two ways of weighting are reported:
+  * per group  : equal weight across the filled slots of that group (fully invested)
+  * the BOOK   : 9 sectors x 4 groups = 36 fixed slots (max 18 longs G1+G3, 18 shorts
+                 G2+G4), each slot 1/36 of capital (1x gross, 50/50 long/short when
+                 full); an empty slot (no stock met the rule) sits in cash.
 """
 import json
 import os
@@ -94,6 +100,7 @@ def run():
             break
         picks = pick(f, d)
         per = {"signal": d, "entry": entry, "exit": exit_}
+        slot_pnl = {+1: [], -1: []}
         for g, (_, side) in GROUPS.items():
             rets, rel = [], []
             for sec, gp in picks.items():
@@ -104,6 +111,7 @@ def run():
                 rs = px.at[exit_, sec] / px.at[entry, sec] - 1
                 pnl = side * r - 2 * COST
                 rets.append(pnl)
+                slot_pnl[side].append(pnl)
                 rel.append(side * (r - rs))
                 rows.append({"signal": d.date(), "entry": entry.date(), "exit": exit_.date(), "group": g,
                              "sector": sec, "ticker": t, "skew90": round(st["skew"], 2),
@@ -112,6 +120,12 @@ def run():
             per[g] = np.mean(rets) if rets else 0.0
             per[g + "_rel"] = np.mean(rel) if rel else 0.0
             per[g + "_n"] = len(rets)
+        n_slots = len(SECTORS)  # per group
+        per["n_long"], per["n_short"] = len(slot_pnl[1]), len(slot_pnl[-1])
+        per["Long book"] = sum(slot_pnl[1]) / (2 * n_slots)      # return of the 18 long slots
+        per["Short book"] = sum(slot_pnl[-1]) / (2 * n_slots)    # return of the 18 short slots
+        per["Book 18L/18S"] = 0.5 * (per["Long book"] + per["Short book"])
+        per["worst_pos"] = min(slot_pnl[1] + slot_pnl[-1], default=0.0)
         per["SPY"] = px.at[exit_, "SPY"] / px.at[entry, "SPY"] - 1
         uni = [t for t in TICKER_SECTOR if t in px.columns and pd.notna(px.at[entry, t])]
         per["EW_universe"] = float(np.nanmean(px.loc[exit_, uni] / px.loc[entry, uni] - 1))
@@ -138,7 +152,36 @@ def stats(r, ppy=252 / REBAL):
 
 
 STRATS = ["G1", "G2", "G3", "G4", "Momentum L/S", "MeanRev L/S", "All 4 combined",
-          "Longs only (G1+G3)", "SPY", "EW_universe"]
+          "Longs only (G1+G3)", "Book 18L/18S", "Long book", "Short book", "SPY", "EW_universe"]
+RISK_STRATS = ["Book 18L/18S", "Long book", "Short book", "MeanRev L/S", "Momentum L/S",
+               "G1", "G2", "G3", "G4", "SPY"]
+
+
+def risk(r, spy, ppy=252 / REBAL):
+    """Risk statistics on 3-week basket returns (annualised where noted)."""
+    eq = (1 + r).cumprod()
+    dd = eq / eq.cummax() - 1
+    # longest time under water, in baskets -> weeks
+    uw, longest = 0, 0
+    for x in dd:
+        uw = uw + 1 if x < 0 else 0
+        longest = max(longest, uw)
+    down = r[r < 0]
+    dvol = np.sqrt((np.minimum(r, 0) ** 2).mean()) * np.sqrt(ppy)
+    q = r.quantile(0.05)
+    cov = np.cov(r, spy)
+    beta = cov[0, 1] / cov[1, 1]
+    ann = r.mean() * ppy
+    cagr = eq.iloc[-1] ** (ppy / len(r)) - 1
+    up, dn = spy > 0, spy < 0
+    return {"Ann. vol": r.std() * np.sqrt(ppy), "Downside vol": dvol,
+            "Sharpe": ann / (r.std() * np.sqrt(ppy)), "Sortino": ann / dvol if dvol else np.nan,
+            "Max drawdown": dd.min(), "Calmar": cagr / abs(dd.min()) if dd.min() < 0 else np.nan,
+            "Longest DD (weeks)": longest * 3, "VaR 95% (3wk)": q, "CVaR 95% (3wk)": r[r <= q].mean(),
+            "Worst basket": r.min(), "Best basket": r.max(), "Skewness": r.skew(), "Excess kurtosis": r.kurt(),
+            "Beta to SPY": beta, "Corr to SPY": np.corrcoef(r, spy)[0, 1],
+            "Up-capture": r[up].mean() / spy[up].mean(), "Down-capture": r[dn].mean() / spy[dn].mean(),
+            "Hit rate": (r > 0).mean(), "Avg loss / avg win": abs(down.mean()) / r[r > 0].mean()}
 
 
 def main():
@@ -146,6 +189,25 @@ def main():
     per, trades, current, asof = run()
     st = pd.DataFrame({s: stats(per[s]) for s in STRATS}).T
     rel = pd.DataFrame({g: stats(per[g + "_rel"]) for g in GROUPS}).T
+    rk = pd.DataFrame({s: risk(per[s], per["SPY"]) for s in RISK_STRATS}).T
+    rk.to_csv(os.path.join(OUT, "risk_stats.csv"))
+    tr = trades.copy()
+    tr["side"] = np.where(tr.group.isin(["G1", "G3"]), "long", "short")
+    pos_risk = tr.groupby("side").pnl.agg(
+        positions="count", avg="mean", worst="min", best="max",
+        loss_gt_10=lambda x: (x < -0.10).mean(), loss_gt_20=lambda x: (x < -0.20).mean())
+    pos_risk.to_csv(os.path.join(OUT, "position_risk.csv"))
+    fill = {"avg_longs": per.n_long.mean(), "avg_shorts": per.n_short.mean(),
+            "min_longs": int(per.n_long.min()), "min_shorts": int(per.n_short.min()),
+            "avg_net_exposure": ((per.n_long - per.n_short) / (4 * len(SECTORS))).mean(),
+            "avg_gross_exposure": ((per.n_long + per.n_short) / (4 * len(SECTORS))).mean(),
+            "slot_fill": {g: per[g + "_n"].mean() for g in GROUPS}}
+    exposure = {"dates": [str(d.date()) for d in per.index], "n_long": per.n_long.tolist(),
+                "n_short": per.n_short.tolist(),
+                "dd_book": list(np.round(((1 + per["Book 18L/18S"]).cumprod() /
+                                          (1 + per["Book 18L/18S"]).cumprod().cummax() - 1).values, 4)),
+                "dd_spy": list(np.round(((1 + per.SPY).cumprod() / (1 + per.SPY).cumprod().cummax() - 1).values, 4)),
+                "ret_book": list(np.round(per["Book 18L/18S"].values, 4))}
     per.to_csv(os.path.join(OUT, "basket_returns.csv"))
     trades.to_csv(os.path.join(OUT, "all_baskets_trades.csv"), index=False)
     st.to_csv(os.path.join(OUT, "summary_stats.csv"))
@@ -169,9 +231,13 @@ def main():
             "equity": {"dates": [str(d.date()) for d in per.index],
                        **{s: list(np.round((1 + per[s]).cumprod().values, 4)) for s in STRATS}},
             "current": cur,
+            "risk": rk.reset_index().rename(columns={"index": "strategy"}).to_dict("records"),
+            "position_risk": pos_risk.reset_index().to_dict("records"),
+            "fill": fill, "exposure": exposure, "sectors": list(SECTORS),
             "last_baskets": trades[trades.signal >= trades.signal.unique()[-3]].to_dict("records"),
         }, fh, default=str)
     pd.set_option("display.width", 200)
+    print(rk.round(3).T); print(pos_risk.round(3)); print(fill)
     print(st.round(3)); print("\nvs sector ETF:\n", rel.round(3)); print("\n", yearly.round(3))
     print("\nCurrent basket as of", asof.date()); print(pd.DataFrame(cur))
 

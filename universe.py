@@ -21,6 +21,10 @@ SECTORS = {
             "DD", "PPG", "IP", "SW", "DOW", "STLD", "PKG", "IFF", "LYB", "AMCR"],
     "XLE": ["XOM", "CVX", "COP", "WMB", "EOG", "KMI", "PSX", "SLB", "MPC", "OKE",
             "VLO", "BKR", "TRGP", "EQT", "OXY", "FANG", "EXE", "HAL", "DVN", "CTRA"],
+    "XLP": ["WMT", "COST", "PG", "KO", "PM", "PEP", "MO", "MDLZ", "CL", "MNST",
+            "TGT", "KDP", "KMB", "KR", "SYY", "KVUE", "GIS", "ADM", "HSY", "CHD"],
+    "XLU": ["NEE", "SO", "CEG", "DUK", "VST", "AEP", "SRE", "D", "EXC", "XEL",
+            "ETR", "PEG", "PCG", "ED", "WEC", "NRG", "DTE", "AEE", "PPL", "CNP"],
 }
 
 BENCHMARKS = ["SPY"] + list(SECTORS)

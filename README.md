@@ -1,6 +1,6 @@
 # IV Skew Sector Strategy
 
-This project backtests 3-week sector baskets built from VolVue 90-day IV skew (`iv_skew_90`) and price action. The universe is the top 20 holdings of XLK, XLY, XLV, XLI, XLC, XLB and XLE.
+This project backtests 3-week sector baskets built from VolVue 90-day IV skew (`iv_skew_90`) and price action. The universe is the top 20 holdings of XLK, XLY, XLV, XLI, XLC, XLB, XLE, XLP and XLU. Each basket holds at most one name per group per sector: up to 18 longs (G1+G3) and 18 shorts (G2+G4). The book gives each of the 36 slots 1/36 of capital, and empty slots sit in cash.
 
 | Group | Side | Rule (skew in vol pts; 4.0 = 0.04) | Pick per sector |
 |---|---|---|---|
