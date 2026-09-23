@@ -21,6 +21,8 @@ Books (empty slots sit in cash earning the T-bill rate):
                            calls use VolVue SPY ATM call IV (30-delta: ATM minus SPY_WING_DISCOUNT vol pts
                            for index skew) and a 1% spread on premium received.
                            Variants: ATM/ATM, 30d/30d, long ATM + short 30d SPY.
+  ATM calls + short SPY  : ATM calls on N x slot notional (N = 1 or 2) plus short SPY shares
+                           worth 0.5 x the call notional (ATM delta ~0.5, so about delta-neutral).
 Each is also run with G3 only (9 slots, 1/9 each), since G3 carries most of the edge.
 For comparison: the stock 18L/18S book from backtest.py, and SPY.
 """
@@ -93,7 +95,7 @@ def run_hold(label, px, f, ivs, rf):
                 dlt = ncdf((math.log(P0 / K) + (r + 0.5 * vk ** 2) * T) / (vk * math.sqrt(T)))
                 spy_short[key] = (prem - max(PT - K, 0.0)) / P0 / dlt
         picks = bt.pick(f, d)
-        slots = {k: [] for k in ("stock", "sec", "spy", "atm", "c30", "atm_dm", "c30_dm", "x_atm", "x_c30", "x_mix")}
+        slots = {k: [] for k in ("stock", "sec", "spy", "atm", "c30", "atm_dm", "c30_dm", "x_atm", "x_c30", "x_mix", "h1", "h2")}
         g3 = {k: [] for k in slots}
         shorts = []
         for sec, gp in picks.items():
@@ -124,6 +126,9 @@ def run_hold(label, px, f, ivs, rf):
                         # delta-matched: calls on notional/delta, so the starting delta equals the stock slot's
                         dlt = ncdf((math.log(S0 / K) + (r + 0.5 * vol * vol) * T) / (vol * math.sqrt(T)))
                         res[key + "_dm"] = (pay - prem) / S0 / dlt + cash
+                    # long ATM calls on N x slot notional + short SPY shares worth 0.5 x N (≈ delta-neutral)
+                    for key, N in (("h1", 1.0), ("h2", 2.0)):
+                        res[key] = N * (res["atm"] - cash) - 0.5 * N * (spy + 2 * ETF_COST) + cash
                     if spy_short:
                         # long stock calls (delta-matched) + short SPY calls with equal dollar delta
                         res["x_atm"] = res["atm_dm"] + spy_short["atm"]
@@ -133,7 +138,7 @@ def run_hold(label, px, f, ivs, rf):
                         res["x_atm"] = res["x_c30"] = res["x_mix"] = cash
                         opt[key] = {"K": K / S0, "prem": prem / S0, "ror": pay / prem - 1}
                 else:
-                    res["atm"] = res["c30"] = res["atm_dm"] = res["c30_dm"] = res["x_atm"] = res["x_c30"] = res["x_mix"] = cash  # no IV -> stay in cash
+                    res["atm"] = res["c30"] = res["atm_dm"] = res["c30_dm"] = res["x_atm"] = res["x_c30"] = res["x_mix"] = res["h1"] = res["h2"] = cash  # no IV -> stay in cash
                 for k in slots:
                     slots[k].append(res[k])
                     if g == "G3":
@@ -164,6 +169,8 @@ NAMES = {
     "L18 x_atm": "18 long ATM calls + short ATM SPY calls",
     "L18 x_c30": "18 long 30d calls + short 30d SPY calls",
     "L18 x_mix": "18 long ATM calls + short 30d SPY calls",
+    "L18 h1": "18 long ATM calls (1x notional) + short SPY 0.5x",
+    "L18 h2": "18 long ATM calls (2x notional) + short SPY 0.5x",
     "G3 stock": "G3 only, stock",
     "G3 sec": "G3 only + short sector ETF",
     "G3 spy": "G3 only + short SPY",
@@ -174,6 +181,8 @@ NAMES = {
     "G3 x_atm": "G3 long ATM calls + short ATM SPY calls",
     "G3 x_c30": "G3 long 30d calls + short 30d SPY calls",
     "G3 x_mix": "G3 long ATM calls + short 30d SPY calls",
+    "G3 h1": "G3 long ATM calls (1x notional) + short SPY 0.5x",
+    "G3 h2": "G3 long ATM calls (2x notional) + short SPY 0.5x",
     "Book 18L/18S (stock shorts)": "Old book: 18L / 18S stocks",
     "SPY": "SPY buy & hold",
 }
