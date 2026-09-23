@@ -15,11 +15,15 @@ FIELDS = "ticker,date,iv_skew_90,iv_skew_90_perc,iv_mean_90"
 
 
 def fetch_volvue(tickers, chunk=10):
+    return fetch_volvue_fields(tickers, FIELDS, chunk)
+
+
+def fetch_volvue_fields(tickers, fields, chunk=10):
     key = os.environ["VOLVUE_API_KEY"]
     frames = []
     for i in range(0, len(tickers), chunk):
         batch = tickers[i:i + chunk]
-        sql = (f"SELECT {FIELDS} FROM data WHERE ticker IN ({','.join(repr(t) for t in batch)}) "
+        sql = (f"SELECT {fields} FROM data WHERE ticker IN ({','.join(repr(t) for t in batch)}) "
                f"AND date>='{START}'")
         r = requests.get(VOLVUE_URL, params={"apiKey": key, "format": "json", "data": sql}, timeout=120)
         r.raise_for_status()

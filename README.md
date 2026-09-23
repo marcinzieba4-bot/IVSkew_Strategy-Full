@@ -16,7 +16,13 @@ export VOLVUE_API_KEY=...          # GET https://api.volvue.com/query?apiKey=..&
 python fetch_data.py               # VolVue skew + Yahoo adjusted closes -> data/
 python backtest.py                 # stats, trades, current basket -> output/
 python control_test.py             # dip-buying control by skew bucket
+python fetch_options_data.py       # VolVue ATM call IVs (20d/30d) + T-bill yield
+python variants.py                 # hedges (sector ETF / SPY), ATM & 30-delta calls, 3-week vs 1-month
 python build_report.py             # output/report.html
 ```
 
 Caveat: the universe is today's list of holdings applied back to 2018, so the results carry survivorship bias. The fairer read is the sector-relative and control tables.
+
+## Implementation variants (`variants.py`)
+
+Keeps the 18 long slots (G1+G3) and tests a sector-ETF or SPY short hedge instead of single-stock shorts. It also tests ATM or 30-delta calls instead of stock (notional-matched and delta-matched sizing), each with a 3-week or 1-month hold. Calls are priced with Black-Scholes on VolVue `iv_call_20` / `iv_call_30`, include a 3% premium spread, and are held to expiry.
