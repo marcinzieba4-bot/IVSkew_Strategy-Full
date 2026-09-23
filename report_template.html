@@ -80,12 +80,12 @@ ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-wid
     <p>The picks are the same throughout: the 18 long slots (G1 + G3, one per sector). What changes is the short leg (none, sector ETF, SPY, or the old single-stock shorts), whether the longs are stock or calls, and whether the hold is 3 weeks or 1 month. Empty slots earn T-bills. Sharpe and Sortino here are on returns in excess of T-bills.</p>
     <div class="legend" id="hold-tabs" role="tablist"></div>
     <div class="tbl"><table id="var-tbl"></table></div>
-    <p class="note"><b>Notional-matched</b> calls: calls on the same dollar notional as the stock slot. The premium is about 4% of notional (ATM) or 2% (30-delta), so it behaves like a small, capped position. <b>ATM calls + short SPY 0.5×</b>: ATM calls on 1× or 2× the slot notional, plus a short in SPY shares worth half the call notional. That is roughly delta-neutral, so it behaves like a long-volatility position: it pays time decay and profits from big moves. <b>Delta-matched</b> calls: calls on notional ÷ delta, so the position starts with the same exposure as holding the stock. Calls are priced with Black-Scholes on VolVue's ATM call IV plus a 3% spread on the premium, and held to expiry at the end of the basket. The 30-delta calls also use ATM IV because VolVue has no wing vols. That slightly overprices them, so their results are conservative.</p>
+    <p class="note"><b>Notional-matched</b> calls: calls on the same dollar notional as the stock slot. The premium is about 4% of notional (ATM) or 2% (30-delta), so it behaves like a small, capped position. <b>ATM puts on shorts</b>: ATM puts on the G2/G4 short picks, priced from VolVue's ATM put IV. The 36-slot book holds ATM calls on the 18 longs and ATM puts on the 18 shorts. <b>ATM calls + short SPY 0.5×</b>: ATM calls on 1× or 2× the slot notional, plus a short in SPY shares worth half the call notional. That is roughly delta-neutral, so it behaves like a long-volatility position: it pays time decay and profits from big moves. <b>Delta-matched</b> calls: calls on notional ÷ delta, so the position starts with the same exposure as holding the stock. Calls are priced with Black-Scholes on VolVue's ATM call IV plus a 3% spread on the premium, and held to expiry at the end of the basket. The 30-delta calls also use ATM IV because VolVue has no wing vols. That slightly overprices them, so their results are conservative.</p>
     <div class="chart-wrap"><div class="legend" id="vlegend"></div><div id="vchart"></div></div>
     <h3>Long single-stock calls + short SPY calls: sensitivity to SPY call skew</h3>
     <p>These rows buy delta-matched calls on each stock and sell SPY calls with the same dollar delta, so each slot starts delta-neutral. SPY OTM calls trade at a lower IV than ATM because of index skew. The main table assumes the 30-delta SPY call is 2 vol points below ATM. The result depends heavily on that assumption: each vol point is worth about 4–5% of CAGR.</p>
     <div class="tbl"><table id="wing-tbl"></table></div>
-    <h3>Call trades: return on premium</h3>
+    <h3>Option trades: return on premium</h3>
     <div class="tbl"><table id="opt-tbl"></table></div>
   </section>
 
@@ -227,7 +227,7 @@ $('ctrl').innerHTML = '<tr><th>Dip bucket (skew90)</th><th>Avg excess vs sector 
   R.control.map(r => `<tr class="${r.bucket.includes('G3')?'hl':''}"><td>${r.bucket}</td><td class="${cls(r.avg)}">${pct(r.avg,2)}</td><td class="${cls(r.avg)}">${pct(Math.pow(1+r.avg,252/15)-1)}</td><td>${(r.hit*100).toFixed(0)}%</td></tr>`).join('');
 
 // variants
-const VROWS = ['L18 stock','L18 sec','L18 spy','L18 atm','L18 c30','L18 atm_dm','L18 c30_dm','L18 x_atm','L18 x_c30','L18 x_mix','L18 h1','L18 h2','G3 stock','G3 sec','G3 spy','G3 atm_dm','G3 x_atm','G3 x_mix','G3 h1','G3 h2','Book 18L/18S (stock shorts)','SPY'];
+const VROWS = ['L18 stock','L18 sec','L18 spy','L18 atm','L18 c30','L18 atm_dm','L18 c30_dm','L18 x_atm','L18 x_c30','L18 x_mix','L18 h1','L18 h2','G3 stock','G3 sec','G3 spy','G3 atm_dm','G3 x_atm','G3 x_mix','G3 h1','G3 h2','S18 stock','S18 put','S18 put_dm','G2 put_dm','G4 put_dm','CP36 atm','CP36 atm_dm','Book 18L/18S (stock shorts)','SPY'];
 const VCOLS = [['CAGR','p'],['Ann. vol','p'],['Sharpe','n'],['Sortino','n'],['Max drawdown','p'],['Calmar','n'],['CVaR 95%','p'],['Worst period','p'],['Beta to SPY','n'],['Hit rate','x']];
 let hold = '3 weeks';
 function drawVarTbl(){
@@ -238,7 +238,7 @@ function drawVarTbl(){
 }
 $('hold-tabs').innerHTML = ['3 weeks','1 month'].map(h => `<button type="button" role="tab" id="tab-${h[0]}" data-h="${h}" aria-pressed="${h===hold}">${h} hold</button>`).join('');
 $('hold-tabs').addEventListener('click', e => { const b=e.target.closest('button'); if(!b) return; hold=b.dataset.h; [...$('hold-tabs').children].forEach(x=>x.setAttribute('aria-pressed', x.dataset.h===hold)); drawVarTbl(); drawV(); });
-const VSER = [['L18 sec','--accent',1],['L18 spy','--mr',1],['L18 stock','--g1',1],['L18 atm_dm','--g4',1],['L18 x_mix','--g2',1],['L18 h2','--spy',0],['L18 x_atm','--g3',0],['L18 c30_dm','--g2',0],['Book 18L/18S (stock shorts)','--all',0],['SPY','--spy',1]];
+const VSER = [['L18 sec','--accent',1],['L18 spy','--mr',1],['L18 stock','--g1',1],['L18 atm_dm','--g4',1],['L18 x_mix','--g2',1],['L18 h2','--spy',0],['CP36 atm','--g3',0],['L18 x_atm','--g3',0],['L18 c30_dm','--g2',0],['Book 18L/18S (stock shorts)','--all',0],['SPY','--spy',1]];
 const von = Object.fromEntries(VSER.map(s=>[s[0],!!s[2]]));
 function drawV(){
   const E = R.variants.equity[hold], d = E.dates, n = d.length, el = $('vchart');

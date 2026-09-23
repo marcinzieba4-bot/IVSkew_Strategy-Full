@@ -23,6 +23,8 @@ Books (empty slots sit in cash earning the T-bill rate):
                            Variants: ATM/ATM, 30d/30d, long ATM + short 30d SPY.
   ATM calls + short SPY  : ATM calls on N x slot notional (N = 1 or 2) plus short SPY shares
                            worth 0.5 x the call notional (ATM delta ~0.5, so about delta-neutral).
+  ATM puts on shorts     : ATM puts on the 18 short slots (G2+G4), priced from VolVue ATM put IV,
+                           notional- or delta-matched; the 36-slot book pairs them with ATM calls.
 Each is also run with G3 only (9 slots, 1/9 each), since G3 carries most of the edge.
 For comparison: the stock 18L/18S book from backtest.py, and SPY.
 """
@@ -63,7 +65,7 @@ def strike_for_delta(S, T, vol, r, delta):
 def load_iv():
     v = pd.read_csv(os.path.join(bt.DATA, "volvue_call_iv.csv"), parse_dates=["date"])
     out = {}
-    for f in ("iv_call_20", "iv_call_30"):
+    for f in ("iv_call_20", "iv_call_30", "iv_put_20", "iv_put_30"):
         v.loc[(v[f] <= 1) | (v[f] > 400), f] = np.nan
         out[f] = v.pivot_table(index="date", columns="ticker", values=f)
     rf = pd.read_csv(os.path.join(bt.DATA, "tbill.csv"), index_col=0, parse_dates=True)["IRX"] / 100
@@ -73,6 +75,7 @@ def load_iv():
 def run_hold(label, px, f, ivs, rf):
     rebal, ivf, cal = HOLDS[label]
     iv = ivs[ivf].reindex(px.index).ffill(limit=3)
+    ivp = ivs[ivf.replace("call", "put")].reindex(px.index).ffill(limit=3)
     rfx = rf.reindex(px.index).ffill().bfill()
     dates = px.index[px.index >= bt.START]
     rows, trades = [], []
@@ -98,11 +101,33 @@ def run_hold(label, px, f, ivs, rf):
         slots = {k: [] for k in ("stock", "sec", "spy", "atm", "c30", "atm_dm", "c30_dm", "x_atm", "x_c30", "x_mix", "h1", "h2")}
         g3 = {k: [] for k in slots}
         shorts = []
+        puts = {k: [] for k in ("stock", "put", "put_dm")}
+        puts_g = {g: [] for g in ("G2", "G4")}
         for sec, gp in picks.items():
             for g in ("G2", "G4"):
                 if g in gp:
                     t = gp[g][0]
-                    shorts.append(-(px.at[x, t] / px.at[e, t] - 1) - 2 * STOCK_COST)
+                    S0, ST = px.at[e, t], px.at[x, t]
+                    stk = -(ST / S0 - 1) - 2 * STOCK_COST
+                    shorts.append(stk)
+                    vp = ivp.at[e, t] / 100 if t in ivp.columns and pd.notna(ivp.at[e, t]) else np.nan
+                    if np.isfinite(vp):
+                        call = bs_call(S0, S0, T, vp, r)
+                        prem = (call - S0 + S0 * math.exp(-r * T)) * (1 + OPT_SPREAD)   # ATM put via parity
+                        pay = max(S0 - ST, 0.0)
+                        d1 = (r + 0.5 * vp * vp) * T / (vp * math.sqrt(T))
+                        pdelta = 1 - ncdf(d1)                                   # |put delta|
+                        pn = (pay - prem) / S0 + cash
+                        pdm = (pay - prem) / S0 / pdelta + cash
+                        trades.append({"hold": label, "entry": e.date(), "exit": x.date(), "group": g, "sector": sec,
+                                       "ticker": t, "stock_ret": ST / S0 - 1, "iv_put": vp,
+                                       "put_premium": prem / S0, "put_ret_on_premium": pay / prem - 1})
+                    else:
+                        pn = pdm = cash
+                    puts["stock"].append(stk + cash)
+                    puts["put"].append(pn)
+                    puts["put_dm"].append(pdm)
+                    puts_g[g].append(pdm)
             for g in ("G1", "G3"):
                 if g not in gp:
                     continue
@@ -126,6 +151,7 @@ def run_hold(label, px, f, ivs, rf):
                         # delta-matched: calls on notional/delta, so the starting delta equals the stock slot's
                         dlt = ncdf((math.log(S0 / K) + (r + 0.5 * vol * vol) * T) / (vol * math.sqrt(T)))
                         res[key + "_dm"] = (pay - prem) / S0 / dlt + cash
+                        opt[key] = {"K": K / S0, "prem": prem / S0, "ror": pay / prem - 1}
                     # long ATM calls on N x slot notional + short SPY shares worth 0.5 x N (≈ delta-neutral)
                     for key, N in (("h1", 1.0), ("h2", 2.0)):
                         res[key] = N * (res["atm"] - cash) - 0.5 * N * (spy + 2 * ETF_COST) + cash
@@ -136,7 +162,6 @@ def run_hold(label, px, f, ivs, rf):
                         res["x_mix"] = res["atm_dm"] + spy_short["c30"]
                     else:
                         res["x_atm"] = res["x_c30"] = res["x_mix"] = cash
-                        opt[key] = {"K": K / S0, "prem": prem / S0, "ror": pay / prem - 1}
                 else:
                     res["atm"] = res["c30"] = res["atm_dm"] = res["c30_dm"] = res["x_atm"] = res["x_c30"] = res["x_mix"] = res["h1"] = res["h2"] = cash  # no IV -> stay in cash
                 for k in slots:
@@ -153,6 +178,17 @@ def run_hold(label, px, f, ivs, rf):
             row[f"L18 {k}"] = (sum(slots[k]) + (2 * n - len(slots[k])) * cash) / (2 * n)
             row[f"G3 {k}"] = (sum(g3[k]) + (n - len(g3[k])) * cash) / n
         long_ = sum(slots["stock"]) / (2 * n)
+        fill = lambda lst, m: (sum(lst) + (m - len(lst)) * cash) / m  # noqa: E731
+        row["S18 stock"] = fill(puts["stock"], 2 * n)
+        row["S18 put"] = fill(puts["put"], 2 * n)
+        row["S18 put_dm"] = fill(puts["put_dm"], 2 * n)
+        row["G2 put_dm"] = fill(puts_g["G2"], n)
+        row["G4 put_dm"] = fill(puts_g["G4"], n)
+        # 36-slot book: calls on the 18 long slots, puts on the 18 short slots
+        row["CP36 atm"] = 0.5 * (row["L18 atm"] + row["S18 put"])
+        row["CP36 atm_dm"] = 0.5 * (row["L18 atm_dm"] + row["S18 put_dm"])
+        # stock longs hedged with sector ETF + puts on the short picks (half-weight each side)
+        row["SEC+PUT"] = 0.5 * (row["L18 sec"] + row["S18 put_dm"])
         row["Book 18L/18S (stock shorts)"] = 0.5 * (long_ + sum(shorts) / (2 * n))
         rows.append(row)
     return pd.DataFrame(rows).set_index("exit"), pd.DataFrame(trades)
@@ -183,6 +219,14 @@ NAMES = {
     "G3 x_mix": "G3 long ATM calls + short 30d SPY calls",
     "G3 h1": "G3 long ATM calls (1x notional) + short SPY 0.5x",
     "G3 h2": "G3 long ATM calls (2x notional) + short SPY 0.5x",
+    "S18 stock": "18 shorts, stock (short book alone)",
+    "S18 put": "18 shorts via ATM puts (notional-matched)",
+    "S18 put_dm": "18 shorts via ATM puts (delta-matched)",
+    "G2 put_dm": "G2 only via ATM puts (delta-matched)",
+    "G4 put_dm": "G4 only via ATM puts (delta-matched)",
+    "CP36 atm": "36-slot book: ATM calls longs + ATM puts shorts (notional)",
+    "CP36 atm_dm": "36-slot book: ATM calls longs + ATM puts shorts (delta-matched)",
+    "SEC+PUT": "50% longs+sector ETF hedge, 50% puts on shorts",
     "Book 18L/18S (stock shorts)": "Old book: 18L / 18S stocks",
     "SPY": "SPY buy & hold",
 }
@@ -221,14 +265,16 @@ def main():
     tr.to_csv(os.path.join(bt.OUT, "variants_option_trades.csv"), index=False)
     opt = []
     for (hold, grp), g in tr.groupby(["hold", "group"]):
-        for k, nm in (("atm", "ATM"), ("c30", "30-delta")):
+        for k, nm in (("atm", "ATM call"), ("c30", "30-delta call"), ("put", "ATM put")):
             col = f"{k}_ret_on_premium"
             if col not in g:
                 continue
             s = g[col].dropna()
+            if s.empty:
+                continue
             opt.append({"hold": hold, "group": grp, "option": nm, "trades": len(s),
                         "avg premium % spot": g[f"{k}_premium"].mean(),
-                        "avg strike % spot": g[f"{k}_strike"].mean(),
+                        "avg strike % spot": g[f"{k}_strike"].mean() if f"{k}_strike" in g else 1.0,
                         "avg return on premium": s.mean(), "median": s.median(),
                         "expired worthless": (s <= -0.999).mean(), "hit rate": (s > 0).mean(),
                         "best": s.max()})
