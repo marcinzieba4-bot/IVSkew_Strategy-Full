@@ -16,6 +16,11 @@ Books (empty slots sit in cash earning the T-bill rate):
                            iv_call_30 for 1 month) plus a 3% of premium entry spread.
                            The 30-delta strike uses the same ATM IV (no wing vol is available),
                            which slightly overprices OTM calls, so it is conservative.
+  Calls vs SPY calls     : delta-matched long calls on each stock, plus short SPY calls
+                           sized to the same dollar delta (delta-neutral at entry). SPY
+                           calls use VolVue SPY ATM call IV (30-delta: ATM minus SPY_WING_DISCOUNT vol pts
+                           for index skew) and a 1% spread on premium received.
+                           Variants: ATM/ATM, 30d/30d, long ATM + short 30d SPY.
 Each is also run with G3 only (9 slots, 1/9 each), since G3 carries most of the edge.
 For comparison: the stock 18L/18S book from backtest.py, and SPY.
 """
@@ -31,7 +36,9 @@ import backtest as bt
 from universe import SECTORS
 
 HOLDS = {"3 weeks": (15, "iv_call_20", 21), "1 month": (21, "iv_call_30", 30)}  # td, iv field, cal days
-STOCK_COST, ETF_COST, OPT_SPREAD = 0.0010, 0.0002, 0.03
+STOCK_COST, ETF_COST, OPT_SPREAD, SPY_OPT_SPREAD = 0.0010, 0.0002, 0.03, 0.01
+# SPY OTM calls trade below ATM IV (index skew); vol points subtracted for the 30-delta SPY call
+SPY_WING_DISCOUNT = 2.0
 
 
 def ncdf(x):
@@ -74,8 +81,19 @@ def run_hold(label, px, f, ivs, rf):
         r = float(rfx.loc[e])
         cash = (1 + r) ** ((x - e).days / 365) - 1
         spy = px.at[x, "SPY"] / px.at[e, "SPY"] - 1
+        # short SPY calls: P&L per $ of dollar-delta sold, for ATM and 30-delta strikes
+        spy_short = {}
+        vspy = iv.at[e, "SPY"] / 100 if pd.notna(iv.at[e, "SPY"]) else np.nan
+        if np.isfinite(vspy):
+            P0, PT = px.at[e, "SPY"], px.at[x, "SPY"]
+            vw = max(vspy - SPY_WING_DISCOUNT / 100, 0.03)
+            for key, vk in (("atm", vspy), ("c30", vw)):
+                K = P0 if key == "atm" else strike_for_delta(P0, T, vk, r, 0.30)
+                prem = bs_call(P0, K, T, vk, r) * (1 - SPY_OPT_SPREAD)   # premium received
+                dlt = ncdf((math.log(P0 / K) + (r + 0.5 * vk ** 2) * T) / (vk * math.sqrt(T)))
+                spy_short[key] = (prem - max(PT - K, 0.0)) / P0 / dlt
         picks = bt.pick(f, d)
-        slots = {k: [] for k in ("stock", "sec", "spy", "atm", "c30", "atm_dm", "c30_dm")}
+        slots = {k: [] for k in ("stock", "sec", "spy", "atm", "c30", "atm_dm", "c30_dm", "x_atm", "x_c30", "x_mix")}
         g3 = {k: [] for k in slots}
         shorts = []
         for sec, gp in picks.items():
@@ -106,9 +124,16 @@ def run_hold(label, px, f, ivs, rf):
                         # delta-matched: calls on notional/delta, so the starting delta equals the stock slot's
                         dlt = ncdf((math.log(S0 / K) + (r + 0.5 * vol * vol) * T) / (vol * math.sqrt(T)))
                         res[key + "_dm"] = (pay - prem) / S0 / dlt + cash
+                    if spy_short:
+                        # long stock calls (delta-matched) + short SPY calls with equal dollar delta
+                        res["x_atm"] = res["atm_dm"] + spy_short["atm"]
+                        res["x_c30"] = res["c30_dm"] + spy_short["c30"]
+                        res["x_mix"] = res["atm_dm"] + spy_short["c30"]
+                    else:
+                        res["x_atm"] = res["x_c30"] = res["x_mix"] = cash
                         opt[key] = {"K": K / S0, "prem": prem / S0, "ror": pay / prem - 1}
                 else:
-                    res["atm"] = res["c30"] = res["atm_dm"] = res["c30_dm"] = cash  # no IV -> stay in cash
+                    res["atm"] = res["c30"] = res["atm_dm"] = res["c30_dm"] = res["x_atm"] = res["x_c30"] = res["x_mix"] = cash  # no IV -> stay in cash
                 for k in slots:
                     slots[k].append(res[k])
                     if g == "G3":
@@ -136,6 +161,9 @@ NAMES = {
     "L18 c30": "18 longs via 30-delta calls (notional-matched)",
     "L18 atm_dm": "18 longs via ATM calls (delta-matched)",
     "L18 c30_dm": "18 longs via 30-delta calls (delta-matched)",
+    "L18 x_atm": "18 long ATM calls + short ATM SPY calls",
+    "L18 x_c30": "18 long 30d calls + short 30d SPY calls",
+    "L18 x_mix": "18 long ATM calls + short 30d SPY calls",
     "G3 stock": "G3 only, stock",
     "G3 sec": "G3 only + short sector ETF",
     "G3 spy": "G3 only + short SPY",
@@ -143,6 +171,9 @@ NAMES = {
     "G3 c30": "G3 only via 30-delta calls (notional-matched)",
     "G3 atm_dm": "G3 only via ATM calls (delta-matched)",
     "G3 c30_dm": "G3 only via 30-delta calls (delta-matched)",
+    "G3 x_atm": "G3 long ATM calls + short ATM SPY calls",
+    "G3 x_c30": "G3 long 30d calls + short 30d SPY calls",
+    "G3 x_mix": "G3 long ATM calls + short 30d SPY calls",
     "Book 18L/18S (stock shorts)": "Old book: 18L / 18S stocks",
     "SPY": "SPY buy & hold",
 }
