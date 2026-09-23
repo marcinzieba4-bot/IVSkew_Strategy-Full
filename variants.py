@@ -82,6 +82,8 @@ def run_hold(label, px, f, ivs, rf):
     dates = px.index[px.index >= bt.START]
     rows, trades = [], []
     spy_put_trades = []
+    lr = np.log(px).diff()
+    betas = lr.rolling(120).cov(lr["SPY"]).div(lr["SPY"].rolling(120).var(), axis=0)
     n = len(SECTORS)
     for i in range(0, len(dates) - 1 - rebal, rebal):
         d, e, x = dates[i], dates[i + 1], dates[i + 1 + rebal]
@@ -109,7 +111,7 @@ def run_hold(label, px, f, ivs, rf):
             spy_put = (max(P0 - PT, 0.0) - pprem) / P0
             spy_put_trades.append({"exit": x, "premium": pprem / P0, "ret_on_premium": max(P0 - PT, 0.0) / pprem - 1})
         picks = bt.pick(f, d)
-        slots = {k: [] for k in ("stock", "sec", "spy", "atm", "c30", "atm_dm", "c30_dm", "x_atm", "x_c30", "x_mix", "h1", "h2", "pp50", "pp100")}
+        slots = {k: [] for k in ("stock", "sec", "spy", "atm", "c30", "atm_dm", "c30_dm", "x_atm", "x_c30", "x_mix", "h1", "h2", "pp50", "pp100", "spy50", "spy75", "spyb")}
         g3 = {k: [] for k in slots}
         shorts = []
         puts = {k: [] for k in ("stock", "put", "put_dm")}
@@ -151,6 +153,12 @@ def run_hold(label, px, f, ivs, rf):
                 res = {"stock": rs - 2 * STOCK_COST,
                        "sec": rs - rsec - 2 * STOCK_COST - 2 * ETF_COST + cash,
                        "spy": rs - spy - 2 * STOCK_COST - 2 * ETF_COST + cash}
+                # partial SPY hedges, and a beta hedge using the stock's 120-day beta to SPY before entry
+                for key, h in (("spy50", 0.5), ("spy75", 0.75)):
+                    res[key] = rs - h * spy - 2 * STOCK_COST - h * 2 * ETF_COST + h * cash
+                b = float(betas.at[d, t]) if t in betas.columns and pd.notna(betas.at[d, t]) else 1.0
+                b = min(max(b, 0.3), 2.5)
+                res["spyb"] = rs - b * spy - 2 * STOCK_COST - b * 2 * ETF_COST + b * cash
                 vol = iv.at[e, t] / 100 if t in iv.columns and pd.notna(iv.at[e, t]) else np.nan
                 opt = {}
                 if np.isfinite(vol):
@@ -214,6 +222,9 @@ NAMES = {
     "L18 stock": "18 longs, stock (unhedged)",
     "L18 sec": "18 longs + short sector ETF",
     "L18 spy": "18 longs + short SPY",
+    "L18 spy50": "18 longs + short SPY 0.5x",
+    "L18 spy75": "18 longs + short SPY 0.75x",
+    "L18 spyb": "18 longs + short SPY beta-matched",
     "L18 atm": "18 longs via ATM calls (notional-matched)",
     "L18 c30": "18 longs via 30-delta calls (notional-matched)",
     "L18 atm_dm": "18 longs via ATM calls (delta-matched)",
@@ -228,6 +239,7 @@ NAMES = {
     "G3 stock": "G3 only, stock",
     "G3 sec": "G3 only + short sector ETF",
     "G3 spy": "G3 only + short SPY",
+    "G3 spyb": "G3 only + short SPY beta-matched",
     "G3 atm": "G3 only via ATM calls (notional-matched)",
     "G3 c30": "G3 only via 30-delta calls (notional-matched)",
     "G3 atm_dm": "G3 only via ATM calls (delta-matched)",
