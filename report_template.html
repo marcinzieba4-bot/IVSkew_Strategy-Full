@@ -1,0 +1,214 @@
+<title>Sector Skew Baskets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f5f6f3;--panel:#ffffff;--ink:#17201c;--muted:#5b665f;--line:#dde2dc;--soft:#eef1ec;
+  --long:#177a57;--short:#b0452c;--accent:#0f5f73;--spy:#8b938d;
+  --g1:#177a57;--g2:#c0693a;--g3:#0f5f73;--g4:#8a3b6b;--mr:#1f3f99;--all:#17201c;
+  --pos-bg:#e3f1ea;--neg-bg:#f6e4df;
+  --sans:"IBM Plex Sans",system-ui,sans-serif;--cond:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --bg:#101512;--panel:#171e1a;--ink:#e2e8e4;--muted:#98a39c;--line:#2a332e;--soft:#1d2621;
+  --long:#4cc293;--short:#e57f63;--accent:#5fb4c9;--spy:#7d877f;
+  --g1:#4cc293;--g2:#e39a66;--g3:#5fb4c9;--g4:#d07fb0;--mr:#8ea6f0;--all:#e2e8e4;--pos-bg:#193227;--neg-bg:#3a221b;}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --bg:#101512;--panel:#171e1a;--ink:#e2e8e4;--muted:#98a39c;--line:#2a332e;--soft:#1d2621;
+  --long:#4cc293;--short:#e57f63;--accent:#5fb4c9;--spy:#7d877f;
+  --g1:#4cc293;--g2:#e39a66;--g3:#5fb4c9;--g4:#d07fb0;--mr:#8ea6f0;--all:#e2e8e4;--pos-bg:#193227;--neg-bg:#3a221b;}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;padding:0 16px}
+main{max-width:1040px;margin:0 auto;padding-block:40px 64px;display:flex;flex-direction:column;gap:44px}
+h1,h2,h3{font-family:var(--cond);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(28px,4.4vw,42px);font-weight:700;letter-spacing:-.01em}
+h2{font-size:22px;font-weight:600}
+h3{font-size:15px;font-weight:600}
+p{margin:0;max-width:68ch}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sec{display:flex;flex-direction:column;gap:14px}
+.lede{font-size:17px;color:var(--muted)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.pos{color:var(--long)}.neg{color:var(--short)}
+.verdict{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.verdict>div{background:var(--panel);padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.verdict .big{font-family:var(--mono);font-size:26px;font-weight:500}
+.verdict p{font-size:13.5px;color:var(--muted)}
+.chip{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:3px;letter-spacing:.04em;font-weight:500}
+.chip.L{background:var(--pos-bg);color:var(--long)}.chip.S{background:var(--neg-bg);color:var(--short)}
+.chart-wrap{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 14px 8px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.legend button{font:500 12.5px var(--sans);border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:20px;padding:3px 10px 3px 8px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.legend button[aria-pressed="false"]{opacity:.42}
+.legend button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sw{width:14px;height:3px;border-radius:2px;display:inline-block}
+svg text{fill:var(--muted);font-family:var(--mono);font-size:11px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:8px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font:600 12px var(--sans);color:var(--muted);background:var(--soft);text-transform:uppercase;letter-spacing:.04em}
+th:first-child,td:first-child{text-align:left}
+tr:last-child td{border-bottom:0}
+td{font-family:var(--mono);font-variant-numeric:tabular-nums}
+td:first-child{font-family:var(--sans);font-weight:500}
+tr.hl td{background:var(--soft)}
+tr.bench td{color:var(--muted)}
+.cell-pos{background:var(--pos-bg)}.cell-neg{background:var(--neg-bg)}
+.basket{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.sector{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.sector h3{display:flex;justify-content:space-between;align-items:baseline}
+.pick{display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:baseline;font-size:13.5px}
+.pick .tk{font-family:var(--mono);font-weight:500}
+.pick .meta{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right}
+.pick.none{color:var(--muted);font-size:12.5px}
+.groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.groups>div{border-top:3px solid var(--c);padding-top:8px;display:flex;flex-direction:column;gap:4px}
+.groups p{font-size:13.5px;color:var(--muted)}
+ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:75ch}
+.note{font-size:13px;color:var(--muted)}
+</style>
+<main>
+  <header class="sec">
+    <span class="eyebrow">VolVue 90-day IV skew · 7 SPDR sectors × top 20 · 3-week baskets · <span id="span"></span></span>
+    <h1>High-skew dips are the edge. Shorting on skew is not.</h1>
+    <p class="lede">Every 3 weeks, each sector's most extreme name in four skew/price buckets was bought or shorted. Of the four, only the <b>long mean-revert bucket</b> (high skew, pullback already deep) beats its sector ETF by a wide margin. The two short buckets lose money in absolute terms.</p>
+  </header>
+
+  <section class="verdict" id="verdict"></section>
+
+  <section class="sec">
+    <h2>Growth of $1</h2>
+    <p class="note">Log scale. Each basket is entered at the next day's close after the signal and held 15 trading days, with 10 bp costs per side. Short groups show short P&amp;L. Click a series to toggle it.</p>
+    <div class="chart-wrap"><div class="legend" id="legend"></div><div id="chart"></div></div>
+  </section>
+
+  <section class="sec">
+    <h2>Performance by group and combination</h2>
+    <div class="tbl"><table id="stats"></table></div>
+  </section>
+
+  <section class="sec">
+    <h2>Stock-picking skill: return vs own sector ETF</h2>
+    <p>This strips out market direction. Longs are measured as stock minus its sector ETF; shorts as sector ETF minus stock. It shows whether the skew signal picks the right names inside a sector.</p>
+    <div class="tbl"><table id="rel"></table></div>
+  </section>
+
+  <section class="sec">
+    <h2>Control: does skew matter, or is it just dip-buying?</h2>
+    <p>This runs the same dip rule (≥ 8% below the 60-day high, deepest name per sector) in each skew bucket. All buckets carry the same survivorship bias, so the gap between them isolates what skew adds.</p>
+    <div class="tbl"><table id="ctrl"></table></div>
+    <p class="note">The monotonic climb from low to high skew is the real signal. The "any skew" row is close to G3 because the deepest dips usually carry high skew anyway, so a large part of G3's absolute return is dip-buying in names we already know survived.</p>
+  </section>
+
+  <section class="sec">
+    <h2>Calendar-year returns</h2>
+    <div class="tbl"><table id="yearly"></table></div>
+  </section>
+
+  <section class="sec">
+    <h2>Current basket</h2>
+    <p>Signal as of <b class="num" id="asof"></b>. Enter at the next close and hold 3 weeks. Figures are skew (vol pts), 20-day return and distance from the 60-day high. An empty slot means no stock met that group's rule.</p>
+    <div class="basket" id="basket"></div>
+  </section>
+
+  <section class="sec">
+    <h2>Group rules</h2>
+    <div class="groups" id="groups"></div>
+  </section>
+
+  <section class="sec">
+    <h2>Caveats</h2>
+    <ul>
+      <li><b>Survivorship bias.</b> The universe is <i>today's</i> top-20 holdings, applied back to 2018. Buying dips in names that later became mega-caps flatters every long bucket, and G3 most of all. The sector-relative and control tables are the fairer read.</li>
+      <li>XLY was listed twice in the request, so there are 7 unique sectors. CTRA and IPG are excluded because they have no price history after their mergers. EA is carried at its last price after it went private.</li>
+      <li>The skew thresholds (4.0 / 5.0 vol pts = 0.04 / 0.05) split the sample roughly 38% / 38%. Sector medians vary (XLK 4.2, XLI 5.1), so a percentile-based threshold may be a sensible next test.</li>
+      <li>Short costs (borrow, dividends paid) are not modelled beyond the 10 bp per side. Outlier skew prints outside [−10, 40] are dropped. WBD's current skew of 19 reflects its pending deal, not a normal hedging signal.</li>
+    </ul>
+  </section>
+</main>
+<script>
+const R = __DATA__;
+const $ = id => document.getElementById(id);
+const pct = (x, d=1) => (x>=0?'+':'') + (x*100).toFixed(d) + '%';
+const cls = x => x>=0 ? 'pos' : 'neg';
+const S = Object.fromEntries(R.stats.map(r => [r.strategy, r]));
+const V = Object.fromEntries(R.vs_sector.map(r => [r.group, r]));
+const NAMES = {G1:'G1 Long momentum',G2:'G2 Short momentum',G3:'G3 Long mean-revert',G4:'G4 Short mean-revert',
+  'Momentum L/S':'Momentum L/S (G1+G2)','MeanRev L/S':'Mean-revert L/S (G3+G4)','All 4 combined':'All 4 combined',
+  'Longs only (G1+G3)':'Longs only (G1+G3)',SPY:'SPY buy & hold',EW_universe:'Equal-weight universe'};
+const SIDE = {G1:'L',G2:'S',G3:'L',G4:'S'};
+$('span').textContent = R.equity.dates[0].slice(0,7) + ' → ' + R.asof;
+$('asof').textContent = R.asof;
+
+// verdict
+const v = [
+  ['G3 long mean-revert', pct(S.G3.CAGR), 'CAGR, Sharpe ' + S.G3.Sharpe.toFixed(2) + '. Beats its sector ETF by ' + pct(V.G3.CAGR) + ' a year.'],
+  ['Mean-revert L/S', pct(S['MeanRev L/S'].CAGR), 'CAGR at ' + pct(S['MeanRev L/S']['Ann. vol'],0).slice(1) + ' vol, max drawdown ' + pct(S['MeanRev L/S']['Max drawdown'],0) + '. Close to market-neutral.'],
+  ['Momentum L/S', pct(S['Momentum L/S'].CAGR), 'CAGR. G1 longs work, but G2 shorts give it all back. Low skew adds no short edge.'],
+  ['SPY benchmark', pct(S.SPY.CAGR), 'CAGR, Sharpe ' + S.SPY.Sharpe.toFixed(2) + ', max drawdown ' + pct(S.SPY['Max drawdown'],0) + '.'],
+];
+$('verdict').innerHTML = v.map(([h,b,p]) => `<div><span class="eyebrow">${h}</span><span class="big ${b.startsWith('-')?'neg':'pos'}">${b}</span><p>${p}</p></div>`).join('');
+
+// chart
+const SERIES = [['G1','--g1',1],['G2','--g2',0],['G3','--g3',1],['G4','--g4',0],['MeanRev L/S','--mr',1],['All 4 combined','--all',0],['SPY','--spy',1]];
+const on = Object.fromEntries(SERIES.map(s => [s[0], !!s[2]]));
+function col(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function draw(){
+  const el = $('chart'), W = Math.max(320, el.clientWidth), H = Math.round(Math.min(420, Math.max(260, W*0.45)));
+  const m = {l:48,r:12,t:10,b:26}, iw = W-m.l-m.r, ih = H-m.t-m.b;
+  const d = R.equity.dates, n = d.length, act = SERIES.filter(s => on[s[0]]);
+  let lo = Infinity, hi = -Infinity;
+  act.forEach(([k]) => R.equity[k].forEach(y => {lo=Math.min(lo,y);hi=Math.max(hi,y);}));
+  if(!act.length){lo=.5;hi=2;}
+  lo = Math.min(lo,1)*0.92; hi = Math.max(hi,1)*1.08;
+  const ly = Math.log(lo), hy = Math.log(hi);
+  const X = i => m.l + i/(n-1)*iw, Y = y => m.t + (hy-Math.log(y))/(hy-ly)*ih;
+  const cand = [0.1,0.2,0.25,0.5,1,2,3,5,10,15,20].filter(t => t>=lo && t<=hi);
+  let g = '';
+  cand.forEach(t => g += `<line x1="${m.l}" x2="${W-m.r}" y1="${Y(t)}" y2="${Y(t)}" stroke="${col('--line')}" stroke-width="${t===1?1.4:1}"/><text x="${m.l-6}" y="${Y(t)+4}" text-anchor="end">$${t}</text>`);
+  let lastYear = '';
+  d.forEach((s,i) => { const yr = s.slice(0,4); if (yr!==lastYear){ lastYear=yr; if(i>0 || true){ g += `<line x1="${X(i)}" x2="${X(i)}" y1="${m.t}" y2="${m.t+ih}" stroke="${col('--line')}" stroke-dasharray="2 3"/>`; if (X(i) < W-m.r-24) g += `<text x="${X(i)+3}" y="${H-8}">${W<560?"'"+yr.slice(2):yr}</text>`;}}});
+  act.forEach(([k,c]) => {
+    const pts = R.equity[k].map((y,i) => `${X(i).toFixed(1)},${Y(y).toFixed(1)}`).join(' ');
+    const last = R.equity[k][n-1];
+    g += `<polyline points="${pts}" fill="none" stroke="${col(c)}" stroke-width="${k==='G3'||k==='MeanRev L/S'?2.2:1.6}" stroke-linejoin="round"/>`;
+    g += `<circle cx="${X(n-1)}" cy="${Y(last)}" r="3" fill="${col(c)}"/>`;
+  });
+  el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Growth of one dollar by strategy">${g}</svg>`;
+}
+$('legend').innerHTML = SERIES.map(([k,c]) => `<button type="button" id="lg-${k.replace(/\W/g,'')}" data-k="${k}" aria-pressed="${on[k]}"><span class="sw" style="background:var(${c})"></span>${NAMES[k]} <span class="num" style="color:var(--muted)">$${R.equity[k][R.equity[k].length-1].toFixed(2)}</span></button>`).join('');
+$('legend').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; const k=b.dataset.k; on[k]=!on[k]; b.setAttribute('aria-pressed', on[k]); draw(); });
+draw(); addEventListener('resize', draw);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+new MutationObserver(draw).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+
+// stats table
+const cols = ['CAGR','Ann. vol','Sharpe','Max drawdown','Hit rate','Avg / basket','Total return'];
+const fmt = (c,x) => c==='Sharpe' ? x.toFixed(2) : c==='Hit rate' ? (x*100).toFixed(0)+'%' : pct(x, c==='Avg / basket'?2:1);
+const sgn = (c,x) => ['CAGR','Avg / basket','Total return','Sharpe'].includes(c) ? cls(x) : '';
+$('stats').innerHTML = '<tr><th>Strategy</th>' + cols.map(c=>`<th>${c}</th>`).join('') + '</tr>' +
+  Object.keys(NAMES).map(k => { const r=S[k]; const tag = SIDE[k] ? ` <span class="chip ${SIDE[k]}">${SIDE[k]==='L'?'LONG':'SHORT'}</span>` : '';
+    return `<tr class="${k==='G3'||k==='MeanRev L/S'?'hl':''} ${k==='SPY'||k==='EW_universe'?'bench':''}"><td>${NAMES[k]}${tag}</td>` + cols.map(c=>`<td class="${sgn(c,r[c])}">${fmt(c,r[c])}</td>`).join('') + '</tr>'; }).join('');
+$('rel').innerHTML = '<tr><th>Group</th><th>Excess CAGR</th><th>Avg / basket</th><th>Hit rate</th><th>Info ratio</th><th>Max rel. DD</th></tr>' +
+  ['G1','G2','G3','G4'].map(k => { const r=V[k]; return `<tr class="${k==='G3'?'hl':''}"><td>${NAMES[k]} <span class="chip ${SIDE[k]}">${SIDE[k]==='L'?'LONG':'SHORT'}</span></td><td class="${cls(r.CAGR)}">${pct(r.CAGR)}</td><td class="${cls(r['Avg / basket'])}">${pct(r['Avg / basket'],2)}</td><td>${(r['Hit rate']*100).toFixed(0)}%</td><td class="${cls(r.Sharpe)}">${r.Sharpe.toFixed(2)}</td><td>${pct(r['Max drawdown'],0)}</td></tr>`; }).join('');
+$('ctrl').innerHTML = '<tr><th>Dip bucket (skew90)</th><th>Avg excess vs sector / 3 wk</th><th>Annualised (≈16.8 baskets)</th><th>Hit rate</th></tr>' +
+  R.control.map(r => `<tr class="${r.bucket.includes('G3')?'hl':''}"><td>${r.bucket}</td><td class="${cls(r.avg)}">${pct(r.avg,2)}</td><td class="${cls(r.avg)}">${pct(Math.pow(1+r.avg,252/15)-1)}</td><td>${(r.hit*100).toFixed(0)}%</td></tr>`).join('');
+
+// yearly
+const yk = ['G1','G2','G3','G4','MeanRev L/S','All 4 combined','SPY'];
+$('yearly').innerHTML = '<tr><th>Year</th>' + yk.map(k=>`<th>${k.replace(' combined','')}</th>`).join('') + '</tr>' +
+  R.yearly.map(r => `<tr><td>${r.year}${String(r.year)===R.asof.slice(0,4)?' YTD':''}${r.year===2018?' (Jun–)':''}</td>` + yk.map(k=>`<td class="${r[k]>=0?'cell-pos':'cell-neg'}">${pct(r[k],0)}</td>`).join('') + '</tr>').join('');
+
+// basket
+const secs = ['XLK','XLY','XLV','XLI','XLC','XLB','XLE'];
+$('basket').innerHTML = secs.map(s => {
+  const rows = ['G1','G2','G3','G4'].map(g => { const p = R.current.find(c => c.sector===s && c.group===g);
+    if(!p) return `<div class="pick none"><span class="chip ${SIDE[g]}">${g}</span><span>—</span><span></span></div>`;
+    return `<div class="pick"><span class="chip ${SIDE[g]}">${g}</span><span class="tk">${SIDE[g]==='L'?'▲':'▼'} ${p.ticker}</span><span class="meta">${p.skew.toFixed(1)} · ${pct(p.mom,0)} · ${pct(p.dd,0)}</span></div>`; }).join('');
+  return `<div class="sector"><h3>${s}<span class="eyebrow">skew · 20d · vs hi</span></h3>${rows}</div>`; }).join('');
+
+const GD = {G1:['--g1','skew90 ≤ 4.0, 20-day return > 0, close above 50-day SMA. Pick: strongest 20-day return.'],
+  G2:['--g2','skew90 ≤ 4.0, 20-day return < 0, close below 50-day SMA. Pick: weakest 20-day return.'],
+  G3:['--g3','skew90 ≥ 5.0 and already ≥ 8% below the 60-day high, so the pullback is advanced and fear is priced in. Pick: deepest drawdown.'],
+  G4:['--g4','skew90 ≥ 5.0 while the price is up over 20 days and within 3% of its 60-day high, so hedgers are buying puts at the top. Pick: highest skew.']};
+$('groups').innerHTML = Object.entries(GD).map(([g,[c,t]]) => `<div style="--c:var(${c})"><h3>${NAMES[g]} <span class="chip ${SIDE[g]}">${SIDE[g]==='L'?'LONG':'SHORT'}</span></h3><p>${t}</p></div>`).join('');
+</script>
