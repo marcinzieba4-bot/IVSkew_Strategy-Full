@@ -1,0 +1,402 @@
+{
+ "signal_date": "2026-09-24",
+ "capital": 100000,
+ "slot_usd": 5555.555555555556,
+ "n_longs": 13,
+ "long_usd": 72222.22222222222,
+ "spy_short_usd": 54166.666666666664,
+ "spy_short_shares": -70,
+ "spy_price": 767.1799926757812,
+ "longs": [
+  {
+   "group": "G1",
+   "sector": "XLK",
+   "ticker": "AMD",
+   "price": 629.260009765625,
+   "skew90": -0.61,
+   "mom20": 0.3084233034928232,
+   "dd60": 0.0,
+   "usd": 5555.555555555556,
+   "shares": 8,
+   "hedge_etf": "XLK",
+   "hedge_etf_shares": -28,
+   "call_iv20": 0.5191,
+   "atm_call_prem_pct": 0.050760980649485504,
+   "live": 630.1,
+   "chg_since_signal_pct": 0.1334885772715566,
+   "vs_sector_pct": -0.9193557632585891
+  },
+  {
+   "group": "G3",
+   "sector": "XLY",
+   "ticker": "HLT",
+   "price": 312.1300048828125,
+   "skew90": 5.29,
+   "mom20": -0.061432501881654056,
+   "dd60": -0.08456811775596895,
+   "usd": 5555.555555555556,
+   "shares": 17,
+   "hedge_etf": "XLY",
+   "hedge_etf_shares": -50,
+   "call_iv20": 0.2645,
+   "atm_call_prem_pct": 0.026462643218000802,
+   "live": 313.8,
+   "chg_since_signal_pct": 0.5350319069179266,
+   "vs_sector_pct": 0.24496636480317857
+  },
+  {
+   "group": "G1",
+   "sector": "XLY",
+   "ticker": "TSLA",
+   "price": 377.9400024414063,
+   "skew90": 0.31,
+   "mom20": 0.09288067328930993,
+   "dd60": -0.11135665814929863,
+   "usd": 5555.555555555556,
+   "shares": 14,
+   "hedge_etf": "XLY",
+   "hedge_etf_shares": -50,
+   "call_iv20": 0.3998,
+   "atm_call_prem_pct": 0.0393783444741095,
+   "live": 373.19,
+   "chg_since_signal_pct": -1.2568138886390412,
+   "vs_sector_pct": -1.5468794307537892
+  },
+  {
+   "group": "G3",
+   "sector": "XLV",
+   "ticker": "ABT",
+   "price": 101.06999969482422,
+   "skew90": 6.91,
+   "mom20": -0.11419806269543642,
+   "dd60": -0.13371045443517837,
+   "usd": 5555.555555555556,
+   "shares": 54,
+   "hedge_etf": "XLV",
+   "hedge_etf_shares": -32,
+   "call_iv20": 0.2776,
+   "atm_call_prem_pct": 0.027713262892134112,
+   "live": 101.04,
+   "chg_since_signal_pct": -0.029682096482430698,
+   "vs_sector_pct": -0.06500609985989891
+  },
+  {
+   "group": "G1",
+   "sector": "XLV",
+   "ticker": "ISRG",
+   "price": 399.5199890136719,
+   "skew90": 2.25,
+   "mom20": 0.07855940427369656,
+   "dd60": -0.0769586179145938,
+   "usd": 5555.555555555556,
+   "shares": 13,
+   "hedge_etf": "XLV",
+   "hedge_etf_shares": -32,
+   "call_iv20": 0.33020000000000005,
+   "atm_call_prem_pct": 0.03273479291986979,
+   "live": 402.435,
+   "chg_since_signal_pct": 0.7296283206065901,
+   "vs_sector_pct": 0.6943043172291219
+  },
+  {
+   "group": "G1",
+   "sector": "XLI",
+   "ticker": "DE",
+   "price": 694.9400024414062,
+   "skew90": 0.56,
+   "mom20": 0.09518710641657901,
+   "dd60": -0.020493852437861948,
+   "usd": 5555.555555555556,
+   "shares": 7,
+   "hedge_etf": "XLI",
+   "hedge_etf_shares": -32,
+   "call_iv20": 0.2937,
+   "atm_call_prem_pct": 0.02925029317020202,
+   "live": 684.515,
+   "chg_since_signal_pct": -1.5001298536250651,
+   "vs_sector_pct": -2.3649039773653957
+  },
+  {
+   "group": "G3",
+   "sector": "XLC",
+   "ticker": "OMC",
+   "price": 74.69999694824219,
+   "skew90": 11.2,
+   "mom20": -0.14133439133143155,
+   "dd60": -0.1514715624342441,
+   "usd": 5555.555555555556,
+   "shares": 74,
+   "hedge_etf": "XLC",
+   "hedge_etf_shares": -48,
+   "call_iv20": 0.3443,
+   "atm_call_prem_pct": 0.034080798968829575,
+   "live": 75.845,
+   "chg_since_signal_pct": 1.5328020060712433,
+   "vs_sector_pct": 2.471478981088193
+  },
+  {
+   "group": "G1",
+   "sector": "XLC",
+   "ticker": "META",
+   "price": 777.5900268554688,
+   "skew90": -0.31,
+   "mom20": 0.35071979172254886,
+   "dd60": 0.0,
+   "usd": 5555.555555555556,
+   "shares": 7,
+   "hedge_etf": "XLC",
+   "hedge_etf_shares": -48,
+   "call_iv20": 0.4465,
+   "atm_call_prem_pct": 0.04383497150553963,
+   "live": 751.6,
+   "chg_since_signal_pct": -3.342381712452125,
+   "vs_sector_pct": -2.403704737435175
+  },
+  {
+   "group": "G3",
+   "sector": "XLB",
+   "ticker": "IP",
+   "price": 34.880001068115234,
+   "skew90": 5.06,
+   "mom20": -0.1572843299717792,
+   "dd60": -0.19988177941666763,
+   "usd": 5555.555555555556,
+   "shares": 159,
+   "hedge_etf": "XLB",
+   "hedge_etf_shares": -111,
+   "call_iv20": 0.3549,
+   "atm_call_prem_pct": 0.03509265785323167,
+   "live": 35.08,
+   "chg_since_signal_pct": 0.5733914155971354,
+   "vs_sector_pct": 0.3419105498205788
+  },
+  {
+   "group": "G1",
+   "sector": "XLE",
+   "ticker": "VLO",
+   "price": 382.8599853515625,
+   "skew90": 0.99,
+   "mom20": 0.10007754128790802,
+   "dd60": -0.07360630448506056,
+   "usd": 5555.555555555556,
+   "shares": 14,
+   "hedge_etf": "XLE",
+   "hedge_etf_shares": -88,
+   "call_iv20": 0.5632,
+   "atm_call_prem_pct": 0.054966481878264514,
+   "live": 376.32,
+   "chg_since_signal_pct": -1.7081924467915233,
+   "vs_sector_pct": -0.32640571323644396
+  },
+  {
+   "group": "G3",
+   "sector": "XLP",
+   "ticker": "MNST",
+   "price": 42.66999816894531,
+   "skew90": 8.44,
+   "mom20": -0.10750895328811172,
+   "dd60": -0.14608771009461852,
+   "usd": 5555.555555555556,
+   "shares": 130,
+   "hedge_etf": "XLP",
+   "hedge_etf_shares": -67,
+   "call_iv20": 0.2711,
+   "atm_call_prem_pct": 0.027092724601878514,
+   "live": 43.075,
+   "chg_since_signal_pct": 0.9491489300073264,
+   "vs_sector_pct": 0.7104670951948444
+  },
+  {
+   "group": "G1",
+   "sector": "XLP",
+   "ticker": "KR",
+   "price": 58.91999816894531,
+   "skew90": 1.27,
+   "mom20": 0.007007346764206224,
+   "dd60": -0.05349400531814763,
+   "usd": 5555.555555555556,
+   "shares": 94,
+   "hedge_etf": "XLP",
+   "hedge_etf_shares": -67,
+   "call_iv20": 0.2696,
+   "atm_call_prem_pct": 0.026949523898635645,
+   "live": 58.415,
+   "chg_since_signal_pct": -0.8570912841804557,
+   "vs_sector_pct": -1.0957731189929376
+  },
+  {
+   "group": "G3",
+   "sector": "XLU",
+   "ticker": "DTE",
+   "price": 121.18000030517578,
+   "skew90": 9.61,
+   "mom20": -0.1119852682845448,
+   "dd60": -0.20622798465640124,
+   "usd": 5555.555555555556,
+   "shares": 45,
+   "hedge_etf": "XLU",
+   "hedge_etf_shares": -141,
+   "call_iv20": 0.2683,
+   "atm_call_prem_pct": 0.026825416792168544,
+   "live": 120.925,
+   "chg_since_signal_pct": -0.21043101545931142,
+   "vs_sector_pct": -0.1469132055917255
+  }
+ ],
+ "reference_shorts": [
+  {
+   "group": "G2",
+   "sector": "XLK",
+   "ticker": "INTU",
+   "skew90": 1.51
+  },
+  {
+   "group": "G2",
+   "sector": "XLY",
+   "ticker": "BKNG",
+   "skew90": 3.76
+  },
+  {
+   "group": "G2",
+   "sector": "XLV",
+   "ticker": "SYK",
+   "skew90": 2.38
+  },
+  {
+   "group": "G2",
+   "sector": "XLI",
+   "ticker": "GD",
+   "skew90": 2.26
+  },
+  {
+   "group": "G2",
+   "sector": "XLC",
+   "ticker": "CHTR",
+   "skew90": -3.23
+  },
+  {
+   "group": "G2",
+   "sector": "XLB",
+   "ticker": "VMC",
+   "skew90": 2.99
+  },
+  {
+   "group": "G2",
+   "sector": "XLE",
+   "ticker": "EXE",
+   "skew90": -2.57
+  },
+  {
+   "group": "G2",
+   "sector": "XLP",
+   "ticker": "COST",
+   "skew90": 0.55
+  },
+  {
+   "group": "G2",
+   "sector": "XLU",
+   "ticker": "PCG",
+   "skew90": 1.88
+  }
+ ],
+ "risk": {
+  "A: longs + sector ETF": {
+   "gross_usd": 144444.44444444447,
+   "net_usd": 0.0,
+   "vol_3wk_pct": 1.5995565932791014,
+   "vol_ann_pct": 6.556231063478806,
+   "beta": 0.13241542264866082,
+   "var95_3wk_usd": -1663.9509550742077,
+   "cvar95_3wk_usd": -2123.324859141468,
+   "worst_3wk_usd": -3241.716887700305,
+   "worst_3wk_date": "2022-06-09",
+   "p_loss_pct": 39.277108433734945
+  },
+  "B: longs + SPY 0.75x": {
+   "gross_usd": 126388.88888888889,
+   "net_usd": 18055.55555555557,
+   "vol_3wk_pct": 1.8231732260820774,
+   "vol_ann_pct": 7.472786514191511,
+   "beta": 0.003204832367147306,
+   "var95_3wk_usd": -2084.6826277635673,
+   "cvar95_3wk_usd": -2928.7651423242187,
+   "worst_3wk_usd": -5805.2859713266635,
+   "worst_3wk_date": "2020-02-26",
+   "p_loss_pct": 38.40963855421687
+  },
+  "Longs only (no hedge)": {
+   "gross_usd": 72222.22222222223,
+   "net_usd": 72222.22222222223,
+   "vol_3wk_pct": 2.508801471662024,
+   "vol_ann_pct": 10.283026064675099,
+   "beta": 0.5448714990338139,
+   "var95_3wk_usd": -4762.219596003383,
+   "cvar95_3wk_usd": -7683.686002159769,
+   "worst_3wk_usd": -20312.039834789284,
+   "worst_3wk_date": "2020-03-02",
+   "p_loss_pct": 31.373493975903617
+  }
+ },
+ "stress": [
+  {
+   "start": "2020-03-02",
+   "SPY_pct": -27.444762530841306,
+   "A: longs + sector ETF": -677.4101647697372,
+   "B: longs + SPY 0.75x": -5446.126797250246,
+   "Longs only (no hedge)": -20312.039834789288
+  },
+  {
+   "start": "2018-11-30",
+   "SPY_pct": -14.489954987091124,
+   "A: longs + sector ETF": -158.9491865811897,
+   "B: longs + SPY 0.75x": -2280.1656472895847,
+   "Longs only (no hedge)": -10128.891265297278
+  },
+  {
+   "start": "2022-09-09",
+   "SPY_pct": -11.793579555696743,
+   "A: longs + sector ETF": -1736.9482157811817,
+   "B: longs + SPY 0.75x": -3605.7342073325776,
+   "Longs only (no hedge)": -9993.92313333498
+  },
+  {
+   "start": "2022-04-20",
+   "SPY_pct": -11.684020244841031,
+   "A: longs + sector ETF": 368.56697485807166,
+   "B: longs + SPY 0.75x": -945.440056707072,
+   "Longs only (no hedge)": -7274.284355995964
+  },
+  {
+   "start": "2020-03-23",
+   "SPY_pct": 27.28863075425434,
+   "A: longs + sector ETF": 2023.9782389192737,
+   "B: longs + SPY 0.75x": 7476.129431871905,
+   "Longs only (no hedge)": 22257.471090426337
+  }
+ ],
+ "expected": {
+  "A: longs + sector ETF": {
+   "avg_3wk_pct": 0.8285423573590025,
+   "median_3wk_pct": 0.55422425862318,
+   "hit_rate_pct": 64.74820143884892,
+   "avg_3wk_usd": 828.5423573590025
+  },
+  "B: longs + SPY 0.75x": {
+   "avg_3wk_pct": 0.898036963790024,
+   "median_3wk_pct": 0.58034517450783,
+   "hit_rate_pct": 63.30935251798561,
+   "avg_3wk_usd": 898.036963790024
+  },
+  "Longs only (no hedge)": {
+   "avg_3wk_pct": 1.27875346051712,
+   "median_3wk_pct": 1.36965178397042,
+   "hit_rate_pct": 63.30935251798561,
+   "avg_3wk_usd": 1278.75346051712
+  }
+ },
+ "live_mark": {
+  "A: longs + sector ETF": -244.76748546433546,
+  "B: longs + SPY 0.75x": -518.4139520879332,
+  "SPY_pct": 0.5005353842486793
+ }
+}

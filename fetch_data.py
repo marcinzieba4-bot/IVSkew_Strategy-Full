@@ -45,6 +45,15 @@ def fetch_yahoo(ticker):
     r.raise_for_status()
     res = r.json()["chart"]["result"][0]
     idx = pd.to_datetime(res["timestamp"], unit="s").normalize()
+    # drop today's bar while the session is still open: it is not a close yet
+    period = res["meta"].get("currentTradingPeriod", {}).get("regular", {})
+    if period and time.time() < period.get("end", 0) and len(idx) and \
+            idx[-1] == pd.to_datetime(period["start"], unit="s").normalize():
+        res["timestamp"] = res["timestamp"][:-1]
+        for k in ("adjclose", "quote"):
+            for key in list(res["indicators"][k][0]):
+                res["indicators"][k][0][key] = res["indicators"][k][0][key][:-1]
+        idx = idx[:-1]
     adj = pd.Series(res["indicators"]["adjclose"][0]["adjclose"], index=idx, dtype=float)
     close = pd.Series(res["indicators"]["quote"][0]["close"], index=idx, dtype=float)
     return adj.fillna(close).rename(ticker)  # latest bar often has no adjclose yet

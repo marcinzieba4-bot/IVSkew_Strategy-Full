@@ -137,10 +137,24 @@ ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-wid
     <div class="tbl"><table id="yearly"></table></div>
   </section>
 
-  <section class="sec">
-    <h2>Current basket</h2>
-    <p>Signal as of <b class="num" id="asof"></b>. Enter at the next close and hold 3 weeks. Figures are skew (vol pts), 20-day return and distance from the 60-day high. An empty slot means no stock met that group's rule.</p>
-    <div class="basket" id="basket"></div>
+  <section class="sec" id="today">
+    <h2>Today's basket, simulated</h2>
+    <p>Signal on the <b class="num" id="t-sig"></b> close, entry at the next close, hold 3 weeks. Sized for <b class="num" id="t-cap"></b> of capital: each of the 18 long slots gets 1/18, and empty slots stay in cash. Risk applies today's weights to history. Vol and beta come from the last 252 days; the 3-week loss figures come from every overlapping 3-week window since June 2018.</p>
+    <div class="verdict" id="t-tiles"></div>
+    <div class="tbl"><table id="t-pos"></table></div>
+    <p class="note">Hedge A: short each stock's own sector ETF for the same dollar amount (ETF share counts per slot are shown). Hedge B: one SPY short worth 0.75× the total long dollars, <span id="t-spy"></span>. The ATM call premium is for a ~3-week call at VolVue's 20-day call IV, as a % of spot. "Live" is the intraday price when this page was built, and it moves.</p>
+    <h3>Risk of today's book</h3>
+    <div class="tbl"><table id="t-risk"></table></div>
+    <h3>Stress replay: today's weights through the worst (and best) SPY 3-week windows</h3>
+    <div class="tbl"><table id="t-stress"></table></div>
+    <p class="note">Reference only, not traded: the short-signal names (G2/G4) today are <span id="t-ref"></span>. They lost money in every short test.</p>
+  </section>
+
+  <section class="sec" id="audit">
+    <h2>Look-ahead audit</h2>
+    <div class="tbl"><table id="a-tbl"></table></div>
+    <div class="tbl"><table id="a-split"></table></div>
+    <p class="note">The table above shows Sharpe (over T-bills) in each half of the sample. Every choice made in this study (long side only, 3-week hold, index hedge) would also have been made from the first half alone.</p>
   </section>
 
   <section class="sec">
@@ -173,7 +187,6 @@ const NAMES = {G1:'G1 Long momentum',G2:'G2 Short momentum',G3:'G3 Long mean-rev
   'Longs only (G1+G3)':'Longs only (G1+G3)','Book 18L/18S':'Book 18L / 18S (1× gross)','Long book':'Long book (18 slots)','Short book':'Short book (18 slots)',SPY:'SPY buy & hold',EW_universe:'Equal-weight universe'};
 const SIDE = {G1:'L',G2:'S',G3:'L',G4:'S'};
 $('span').textContent = R.equity.dates[0].slice(0,7) + ' → ' + R.asof;
-$('asof').textContent = R.asof;
 
 // verdict
 const VS = R.variants.stats, VN = R.variants.names;
@@ -279,6 +292,31 @@ $('opt-tbl').innerHTML = '<tr><th>Hold · group · strike</th><th>Trades</th><th
     holds.flatMap(h => vars_.map(vn => `<tr><td>${vn} · ${h}</td>` + discs.map(d => { const r = W.find(x=>x.hold===h&&x.variant===vn&&x['SPY 30d IV discount (vol pts)']===d); return `<td class="${cls(r.CAGR)}${d===2?' cell-pos':''}" style="${d===2?'font-weight:600':''}">${pct(r.CAGR)} <span style="color:var(--muted)">/ ${r.Sharpe.toFixed(2)}</span></td>`; }).join('') + '</tr>')).join('');
 }
 
+// today
+{
+  const T = R.today, usd = x => (x<0?'−$':'$') + Math.abs(Math.round(x)).toLocaleString('en-US');
+  $('t-sig').textContent = T.signal_date; $('t-cap').textContent = usd(T.capital);
+  $('t-spy').textContent = `${Math.abs(T.spy_short_shares)} SPY shares short (${usd(T.spy_short_usd)} at $${T.spy_price.toFixed(2)})`;
+  const A = T.risk['A: longs + sector ETF'], B = T.risk['B: longs + SPY 0.75x'], EA = T.expected['A: longs + sector ETF'], EB = T.expected['B: longs + SPY 0.75x'];
+  $('t-tiles').innerHTML = [
+    ['Longs', T.n_longs + ' / 18', usd(T.long_usd) + ' long, ' + usd(T.capital - T.long_usd) + ' of slot capital in cash.'],
+    ['Expected 3-week P&L', usd(EA.avg_3wk_usd) + ' / ' + usd(EB.avg_3wk_usd), 'Hedge A / Hedge B: the backtest average per basket. It made money ' + EA.hit_rate_pct.toFixed(0) + '% of the time.'],
+    ['3-week 1-in-20 loss', usd(A.var95_3wk_usd) + ' / ' + usd(B.var95_3wk_usd), 'Hedge A / Hedge B, historical replay of today\'s weights.'],
+    ['Beta', A.beta.toFixed(2) + ' / ' + B.beta.toFixed(2), 'Hedge A / Hedge B, last 252 days. Annualised vol ' + A.vol_ann_pct.toFixed(1) + '% / ' + B.vol_ann_pct.toFixed(1) + '%.'],
+  ].map(([h,b,p]) => `<div><span class="eyebrow">${h}</span><span class="big">${b}</span><p>${p}</p></div>`).join('');
+  $('t-pos').innerHTML = '<tr><th>Group</th><th>Ticker</th><th>Sector</th><th>Signal close</th><th>Skew 90d</th><th>20d ret</th><th>vs 60d high</th><th>Shares</th><th>Hedge A ETF shares</th><th>ATM call IV</th><th>Call prem.</th><th>Live</th><th>Since signal</th><th>vs sector</th></tr>' +
+    T.longs.map(l => `<tr><td><span class="chip L">${l.group}</span></td><td>${l.ticker}</td><td>${l.sector}</td><td>${l.price.toFixed(2)}</td><td>${l.skew90.toFixed(2)}</td><td class="${cls(l.mom20)}">${pct(l.mom20)}</td><td>${(l.dd60*100).toFixed(1)}%</td><td>${l.shares}</td><td>${l.hedge_etf} ${l.hedge_etf_shares}</td><td>${l.call_iv20==null?'—':(l.call_iv20*100).toFixed(0)+'%'}</td><td>${l.atm_call_prem_pct==null?'—':(l.atm_call_prem_pct*100).toFixed(1)+'%'}</td><td>${l.live?l.live.toFixed(2):'—'}</td><td class="${cls(l.chg_since_signal_pct||0)}">${l.chg_since_signal_pct==null?'—':(l.chg_since_signal_pct>=0?'+':'')+l.chg_since_signal_pct.toFixed(2)+'%'}</td><td class="${cls(l.vs_sector_pct||0)}">${l.vs_sector_pct==null?'—':(l.vs_sector_pct>=0?'+':'')+l.vs_sector_pct.toFixed(2)+'%'}</td></tr>`).join('');
+  const RK2 = [['Gross exposure','gross_usd','u'],['Net exposure','net_usd','u'],['Vol, 3 weeks','vol_3wk_pct','%'],['Vol, annualised','vol_ann_pct','%'],['Beta to SPY','beta','n'],['3-week 1-in-20 loss','var95_3wk_usd','u'],['Average of worst 5%','cvar95_3wk_usd','u'],['Worst 3-week window','worst_3wk_usd','u'],['Worst window start','worst_3wk_date','s'],['Share of 3-week windows that lost','p_loss_pct','%']];
+  const books = Object.keys(T.risk);
+  $('t-risk').innerHTML = '<tr><th>Metric</th>' + books.map(b=>`<th>${b}</th>`).join('') + '</tr>' + RK2.map(([lab,k,ty]) => `<tr><td>${lab}</td>` + books.map(b => { const x=T.risk[b][k]; return `<td>${ty==='u'?usd(x):ty==='%'?x.toFixed(1)+'%':ty==='s'?x:x.toFixed(2)}</td>`; }).join('') + '</tr>').join('');
+  $('t-stress').innerHTML = '<tr><th>Window start</th><th>SPY over 3 weeks</th>' + books.map(b=>`<th>${b}</th>`).join('') + '</tr>' + T.stress.map(s => `<tr><td>${s.start}</td><td class="${cls(s.SPY_pct)}">${(s.SPY_pct>=0?'+':'')+s.SPY_pct.toFixed(1)}%</td>` + books.map(b=>`<td class="${cls(s[b])}">${usd(s[b])}</td>`).join('') + '</tr>').join('');
+  $('t-ref').textContent = T.reference_shorts.map(r => r.ticker + ' (' + r.group + ')').join(', ');
+  const AU = R.audit;
+  $('a-tbl').innerHTML = '<tr><th>Check</th><th>Result</th><th>Verdict</th></tr>' + AU.checks.map(c => `<tr><td style="white-space:normal">${c[0]}</td><td style="white-space:normal">${c[1]}</td><td><span class="chip ${c[2]==='PASS'?'L':'S'}">${c[2]}</span></td></tr>`).join('');
+  const sp = AU.split, hdr = Object.keys(sp[0]).filter(k=>k!=='variant');
+  $('a-split').innerHTML = '<tr><th>Variant</th>' + hdr.map(h=>`<th>${h}</th>`).join('') + '</tr>' + sp.map(r => `<tr><td>${r.variant}</td>` + hdr.map(h=>`<td class="${cls(r[h])}">${r[h].toFixed(2)}</td>`).join('') + '</tr>').join('');
+}
+
 // risk
 const F = R.fill;
 $('fill').innerHTML = [
@@ -325,14 +363,6 @@ new MutationObserver(drawRisk).observe(document.documentElement, {attributes:tru
 const yk = ['G1','G2','G3','G4','Long book','Short book','Book 18L/18S','SPY'];
 $('yearly').innerHTML = '<tr><th>Year</th>' + yk.map(k=>`<th>${k.replace('Book 18L/18S','Book').replace(' book',' bk')}</th>`).join('') + '</tr>' +
   R.yearly.map(r => `<tr><td>${r.year}${String(r.year)===R.asof.slice(0,4)?' YTD':''}${r.year===2018?' (Jun–)':''}</td>` + yk.map(k=>`<td class="${r[k]>=0?'cell-pos':'cell-neg'}">${pct(r[k],0)}</td>`).join('') + '</tr>').join('');
-
-// basket
-const secs = R.sectors;
-$('basket').innerHTML = secs.map(s => {
-  const rows = ['G1','G2','G3','G4'].map(g => { const p = R.current.find(c => c.sector===s && c.group===g);
-    if(!p) return `<div class="pick none"><span class="chip ${SIDE[g]}">${g}</span><span>—</span><span></span></div>`;
-    return `<div class="pick"><span class="chip ${SIDE[g]}">${g}</span><span class="tk">${SIDE[g]==='L'?'▲':'▼'} ${p.ticker}</span><span class="meta">${p.skew.toFixed(1)} · ${pct(p.mom,0)} · ${pct(p.dd,0)}</span></div>`; }).join('');
-  return `<div class="sector"><h3>${s}<span class="eyebrow">skew · 20d · vs hi</span></h3>${rows}</div>`; }).join('');
 
 const GD = {G1:['--g1','skew90 ≤ 4.0, 20-day return > 0, close above 50-day SMA. Pick: strongest 20-day return.'],
   G2:['--g2','skew90 ≤ 4.0, 20-day return < 0, close below 50-day SMA. Pick: weakest 20-day return.'],
